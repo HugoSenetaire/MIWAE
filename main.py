@@ -1,6 +1,6 @@
 import torch
 import os
-
+import time 
 from default_args import default_args
 from MissingDataDataset import get_dataset
 from MIWAE.get_miwae import get_miwae, get_decoder, get_encoder, get_networks
@@ -12,7 +12,13 @@ def create_path(args_dict):
         os.makedirs(args_dict["model_dir"])
 
     if "name_experiment" not in args_dict.keys() or args_dict["name_experiment"] is None:
-        args_dict["name_experiment"] = args_dict["dataset_name"] + "_" + args_dict["encoder_network"] + "_" + args_dict["decoder_network"] + "_" + args_dict["encoder_reparam"] + "_" + args_dict["decoder_reparam"] + "_" + args_dict["prior"] + "_" + str(args_dict["latent_dim"])
+        args_dict["name_experiment"] = ""
+        if args_dict["yamlmodel"] is not None:
+            args_dict["name_experiment"] += args_dict["yamlmodel"].split("/")[-1].split(".")[0] +"_"
+        if args_dict["yamldataset"] is not None:
+            args_dict["name_experiment"] += args_dict["yamldataset"].split("/")[-1].split(".")[0] +"_"
+        
+        args_dict["name_experiment"] += time.strftime("%Y%m%d_%H%M%S")
     
     complete_weights_path = os.path.join(args_dict["model_dir"], args_dict["name_experiment"])
     if not os.path.exists(complete_weights_path):

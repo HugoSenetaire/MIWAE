@@ -24,8 +24,7 @@ def default_args(parser = None):
     parser = default_args_missingdatadataset(parser = parser, root_default="./local/")
     parser = default_args_miwae(parser = parser)
 
-    parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--nb_epoch', type=int, default=100)
+
     args = parser.parse_args()
     args_dict = vars(args)
     args_dict = update_config_from_paths(args_dict)
