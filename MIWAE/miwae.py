@@ -37,30 +37,27 @@ class MIWAE_VAE(nn.Module):
 
         current_input_extended = current_input.unsqueeze(0).unsqueeze(0).expand(iwae_sample_z, mc_sample_z, batch_size, *dim)
         current_input_extended = current_input_extended.flatten(0,2)
+        if mask is not None :
+            mask_extended = mask.unsqueeze(0).unsqueeze(0).expand(iwae_sample_z, mc_sample_z, batch_size, *dim)
+            mask_extended = mask_extended.flatten(0,2)
 
 
-        _, _z, q_dist = self.encoder(current_input, iwae_sample_z, mc_sample_z)
-        if torch.any(torch.isnan(_z)):
-            print("NAN")
-        # print("_z shape", _z.shape, _z)
-        log_pz = self.prior.log_prob(_z.flatten(0,2))
-        # print("log_pz shape", log_pz.shape)
-        log_qz = q_dist.log_prob(_z.flatten(0,2))
-        # print("log_qz shape", log_qz.shape)
-        kl = log_qz - log_pz  # shape  [iwae_sample_z * mc_sample_z * batch_size, latent_dim]
+        _out, _z, q_dist = self.encoder(current_input, iwae_sample_z, mc_sample_z)
 
-        _logits, _output_dist = self.decoder(_z, 1) #shape batch_size * iwae_samples * 28 * 28
-        # print(current_input_extended)
+        mu, log_var = _out.chunk(2, dim=1)
+        
+        log_pz = self.prior.log_prob(_z.flatten(0,1))
+        log_qz = q_dist.log_prob(_z.flatten(0,1))
+        kl = log_qz - log_pz  # shape  [iwae_sample_z * mc_sample_z, batch_size, latent_dim]
 
-        # print(current_input_extended.shape, _logits.shape)
-        log_pgivenz = _output_dist.log_prob(current_input_extended.round())  
-        # print(((current_input_extended.ceil()-current_input_extended)**2).max())
-        # assert 1==0
+        _logits, _output_dist = self.decoder(_z.flatten(0,2), 1) #shape batch_size * iwae_samples * 28 * 28
+
+        log_pgivenz = _output_dist.log_prob(current_input_extended)  
         kl = torch.sum(kl, axis=-1)# sum over the dimension
-        # print('batch_kl shape: ', kl.shape)
+
         if mask is not None:
-            log_pgivenz = log_pgivenz * mask.squeeze(1)
-        log_pgivenz = torch.sum(log_pgivenz.reshape(n_sample_z * batch_size, -1), axis=-1) # batch_size * n_samples
+            log_pgivenz = log_pgivenz * mask_extended
+        log_pgivenz = torch.sum(log_pgivenz.reshape(n_sample_z, batch_size, -1), axis=-1) # batch_size * n_samples
 
 
 
