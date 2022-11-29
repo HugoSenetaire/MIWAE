@@ -4,3 +4,12 @@ prior : "normal01"
 encoder_reparam : "ReparamTrickNormal"
 decoder_reparam : "ReparamTrickBernoulli"
 latent_dim : 10
+
+
+iwae_z_test : 10
+iwae_z : 10
+mc_z_test : 10
+mc_z : 10
+
+nb_epochs : 100
+batch_size : 128
