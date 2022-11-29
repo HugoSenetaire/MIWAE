@@ -1,0 +1,6 @@
+encoder_network : "ConvFeatureExtractor"
+decoder_network : "ConvDecoder"
+prior : "normal01"
+encoder_reparam : "ReparamTrickNormal"
+decoder_reparam : "ReparamTrickBernoulli"
+latent_dim : 10
