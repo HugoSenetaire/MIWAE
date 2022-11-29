@@ -21,8 +21,10 @@ def save_samples(VAE, args, epoch = -1):
             torchvision.utils.save_image(samples.cpu().detach(), os.path.join(args["samples_dir"], "sample_prior_{}.png".format(epoch)),nrow = 10)
 
 def save_samples_cond(VAE, args, val_loader, epoch = -1, n_samples = 7, nb_inputs = 10):
-        inputs = next(iter(val_loader))['data'][:nb_inputs]
-        masks = next(iter(val_loader))['mask'][:nb_inputs]
+        device = next(VAE.parameters()).device
+
+        inputs = next(iter(val_loader))['data'][:nb_inputs].to(device)
+        masks = next(iter(val_loader))['mask'][:nb_inputs].to(device)
         masked_input = inputs * masks + (1 - masks)*0.1
         samples = VAE.sample_from_input(inputs, masks, n_samples = n_samples)
 
