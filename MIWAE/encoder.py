@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torch.distributions import Normal, Distribution
 from .ReparametrizationTrick import ReparamTrick, ReparamTrickNormal
@@ -27,7 +28,8 @@ class Encoder(nn.Module):
         if iwae_sample_z is None :
             iwae_sample_z = 1
 
-        _z = self.dist.rsample([iwae_sample_z, mc_sample_z])
+        _z = self.reparam_trick.rsample([iwae_sample_z, mc_sample_z])
+
 
         
 
