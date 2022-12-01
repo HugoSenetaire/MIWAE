@@ -1,0 +1,22 @@
+encoder_network : "ConvEncoderMNIST"
+decoder_network : "ConvDecoderMNIST"
+decoder_mask_network : "ConvDecoderMaskMNIST"
+
+prior : "normal01"
+
+encoder_reparam : "ReparamTrickNormal"
+decoder_reparam : "ReparamTrickBernoulli"
+decoder_mask_reparam : "ReparamTrickBernoulli"
+latent_dim : 10
+
+
+iwae_z_test : 10
+iwae_z : 10
+mc_z_test : 1
+mc_z : 1
+
+nb_epochs : 100
+batch_size : 64
+
+model_masking_process : True
+

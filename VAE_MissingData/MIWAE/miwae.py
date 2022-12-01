@@ -17,7 +17,7 @@ class MIWAE_VAE(nn.Module):
         self.conditioning_from_eval = None
 
 
-    def compile(self, optim_encoder, optim_decoder):
+    def compile(self, optim_encoder, optim_decoder, optim_decoder_mask = None):
         self.optim_encoder = optim_encoder
         self.optim_decoder = optim_decoder
 

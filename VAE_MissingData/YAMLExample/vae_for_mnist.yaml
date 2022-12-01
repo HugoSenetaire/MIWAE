@@ -1,6 +1,8 @@
-encoder_network : "ConvFeatureExtractor"
-decoder_network : "ConvDecoder"
+encoder_network : "ConvEncoderMNIST"
+decoder_network : "ConvDecoderMNIST"
+
 prior : "normal01"
+
 encoder_reparam : "ReparamTrickNormal"
 decoder_reparam : "ReparamTrickBernoulli"
 latent_dim : 10

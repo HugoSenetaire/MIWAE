@@ -1,6 +1,6 @@
 import argparse
 from MissingDataDataset.default_args import default_args_missingdatadataset 
-from MIWAE.default_args import default_args_miwae
+from VAE_MissingData.default_args import default_args_miwae
 import yaml
 
 
@@ -11,10 +11,14 @@ def open_yaml(path):
 
 def update_config_from_paths(args_dict,):
 
-    if args_dict["yamlmodel"] is not None :
-        args_dict.update(open_yaml(args_dict["yamlmodel"]))
+
     if args_dict["yamldataset"] is not None :
         args_dict.update(open_yaml(args_dict["yamldataset"]))
+
+    if args_dict["yamlmodel"] is not None :
+        args_dict.update(open_yaml(args_dict["yamlmodel"]))
+
+
     return args_dict
 
 
