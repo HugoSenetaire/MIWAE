@@ -34,9 +34,9 @@ def default_args_miwae(parser = None):
     parser.add_argument("--lr_encoder", type = float, default = 1e-3)
     parser.add_argument("--lr_decoder", type = float, default = 1e-3)
     parser.add_argument("--lr_decoder_mask", type = float, default = 1e-3)
+    parser.add_argument("--constant_imputation", type = int, default = 0)
 
     
-    parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--nb_epoch', type=int, default=100)
     
 

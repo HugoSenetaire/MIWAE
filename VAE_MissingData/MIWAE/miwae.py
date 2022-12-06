@@ -1,7 +1,9 @@
 import torch
 import math
+import numpy as np
 from torch import nn
 from torch.distributions import Distribution, Normal, Binomial, MixtureSameFamily, Bernoulli, Categorical, Independent
+from ..Utils import safe_log_sum_exp, safe_mean_exp
 
 class MIWAE_VAE(nn.Module):
     def __init__(self, encoder: nn.Module, decoder: nn.Module, prior : Distribution = Normal(0, 1), ):
@@ -23,7 +25,7 @@ class MIWAE_VAE(nn.Module):
 
 
 
-    def forward(self, input, mask = None, iwae_sample_z : int = 1, mc_sample_z : int = 1, ):
+    def forward(self, input, mask = None, iwae_sample_z : int = 1, mc_sample_z : int = 1, return_dict = True):
         n_sample_z = iwae_sample_z * mc_sample_z
         n_sample_x = 1
         batch_size = input.shape[0]
@@ -63,13 +65,13 @@ class MIWAE_VAE(nn.Module):
 
         _bound = (log_pgivenz - kl).reshape(iwae_sample_z, mc_sample_z, batch_size)  # batch_size * n_sample
         bound_iwae = torch.logsumexp(_bound, dim = 0) - math.log(iwae_sample_z) # Average over iwae_sample_z
-        bound_iwae = torch.mean(bound_iwae, dim = 1) # Average over mc_sample_z
+        bound_iwae = torch.mean(bound_iwae, dim = 0) # Average over mc_sample_z
         bound_vae = _bound.mean(axis = [0,1]) # Average over iwae_sample_z and mc_sample_z
 
 
         avg_vae_bound = torch.mean(bound_vae)
         avg_iwae_bound = torch.mean(bound_iwae)
-
+        loss = bound_iwae
         _output_dict = {'latents': _z,
                         'q_dist': q_dist,
                         'logits': _logits,
@@ -79,9 +81,10 @@ class MIWAE_VAE(nn.Module):
                         'vae_bound': avg_vae_bound,
                         'iwae_bound': avg_iwae_bound
                         }
-        
-        return _output_dict
-
+        if return_dict :
+            return loss, _output_dict
+        else :
+            return loss
 
     def sample_from_prior(self, n_samples = None, latents = None):
         assert n_samples is not None or latents is not None
@@ -97,10 +100,35 @@ class MIWAE_VAE(nn.Module):
         return _logits, samples
 
 
+    def sample_from_input_importance(self, input, mask, n_samples = 10, iwae_sample_z : int = 10000, ):
+        mc_sample_z = 1
+        batch_size = input.shape[0]
+        current_input = self.imputation(input, mask)
+        _out, _z, q_dist = self.encoder(current_input, iwae_sample_z, mc_sample_z)
+        log_pz = self.prior.log_prob(_z.flatten(0,1))
+        log_qz = q_dist.log_prob(_z.flatten(0,1))
+        kl = (log_qz - log_pz).flatten(2).sum(axis = -1)  # shape  [iwae_sample_z * mc_sample_z, batch_size, latent_dim]
+        _logits, output_dist = self.decoder(_z, 1)
+        samples = output_dist.sample()
+
+        log_pgivenz = output_dist.log_prob(samples).reshape(iwae_sample_z, *input.shape).flatten(2).sum(axis = -1) # shape [iwae_sample_z, batch_size, prod(dim)]
+        importance_weights = (kl - log_pgivenz)
+        importance_weights = torch.exp(importance_weights - safe_log_sum_exp(importance_weights, dim = 0, keepdim = True)).permute(1,0) # Permute batch size and iwae_sample_z
+        choices = torch.multinomial(importance_weights, n_samples, replacement = True).permute(0,1) # Permute batch size and n_samples
+        samples = samples.reshape(iwae_sample_z, *input.shape) # shape [iwae_sample_z, batch_size, prod(dim)] 
+
+        selected_samples = []
+        for k in range(batch_size) :
+            selected_samples.append(samples[choices[k, :], k].unsqueeze(1))
+        selected_samples = torch.cat(selected_samples, axis = 1)
+
+        return selected_samples
+
     def sample_from_input(self, input, mask, n_samples = 1,):
         assert n_samples is not None
         # first I have to pass the input through the encoder
-        _, _z, _ = self.encoder(input, mc_sample_z = n_samples)
+        current_input = self.imputation(input, mask)
+        _, _z, _ = self.encoder(current_input, mc_sample_z = n_samples)
         # now I have to pass those through the decoder
         _, output_dist = self.decoder(_z, 1)
         

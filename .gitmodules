@@ -1,3 +1,6 @@
 [submodule "MissingDataDataset"]
 	path = MissingDataDataset
 	url = git@github.com:HugoSenetaire/MissingDataDataset.git
+[submodule "VAE_MissingData/StratifiedSGDforMissingData"]
+	path = VAE_MissingData/StratifiedSGDforMissingData
+	url = git@github.com:HugoSenetaire/StratifiedSGDforMissingData.git

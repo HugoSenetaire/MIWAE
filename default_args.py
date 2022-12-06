@@ -1,6 +1,7 @@
 import argparse
 from MissingDataDataset.default_args import default_args_missingdatadataset 
 from VAE_MissingData.default_args import default_args_miwae
+from VAE_MissingData.StratifiedSGDforMissingData import default_args_data_loading
 import yaml
 
 
@@ -18,6 +19,9 @@ def update_config_from_paths(args_dict,):
     if args_dict["yamlmodel"] is not None :
         args_dict.update(open_yaml(args_dict["yamlmodel"]))
 
+    if args_dict["yamlbatchsampler"] is not None :
+        args_dict.update(open_yaml(args_dict["yamlbatchsampler"]))
+
 
     return args_dict
 
@@ -27,6 +31,7 @@ def default_args(parser = None):
         parser = argparse.ArgumentParser()
     parser = default_args_missingdatadataset(parser = parser, root_default="./local/")
     parser = default_args_miwae(parser = parser)
+    parser = default_args_data_loading(parser = parser)
 
 
     args = parser.parse_args()
