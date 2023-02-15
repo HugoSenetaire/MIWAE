@@ -38,8 +38,6 @@ def default_args_miwae(parser = None):
 
     
     parser.add_argument('--nb_epoch', type=int, default=100)
-    
-
     parser.add_argument('--yamlmodel', type=str, default=None)
 
     return parser

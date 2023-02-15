@@ -16,10 +16,13 @@ class Onepass():
         else :
             mask = None
         if return_dict :
+            # out_bound, _output_dict_ = self.model.forward_original(input, mask = mask, iwae_sample_z = self.iwae_z, mc_sample_z = self.mc_z, return_dict = return_dict)
             out_bound, _output_dict_ = self.model(input, mask = mask, iwae_sample_z = self.iwae_z, mc_sample_z = self.mc_z, return_dict = return_dict)
             _output_dict_['batch_size'] = input.shape[0]
         else :
-            out_bound = self.model(input, mask = mask, iwae_sample_z = self.iwae_z, mc_sample_z = self.mc_z, return_dict = return_dict)
+            # out_bound = self.model.forward_original(input, mask = mask, iwae_sample_z = self.iwae_z, mc_sample_z = self.mc_z, return_dict = return_dict)
+            out_bound, _output_dict_ = self.model(input, mask = mask, iwae_sample_z = self.iwae_z, mc_sample_z = self.mc_z, return_dict = return_dict)
+
         loss_per_instance = -out_bound
         if return_dict:
             return loss_per_instance, _output_dict_

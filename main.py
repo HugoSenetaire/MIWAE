@@ -6,7 +6,7 @@ import time
 from default_args import default_args
 from MissingDataDataset import get_dataset
 from VAE_MissingData.get_miwae import get_miwae, get_decoder, get_encoder, get_networks, get_decoder_mask
-from VAE_MissingData.TrainingUtils import train_epoch, eval, Onepass
+from VAE_MissingData.TrainingUtils import train_epoch, eval, Onepass, get_trainer_step
 from VAE_MissingData.StratifiedSGDforMissingData import get_dataloader
 from backpack import extend
 from tensorboardX import SummaryWriter
@@ -93,8 +93,6 @@ if __name__ == "__main__":
         decoder_mask = None
     miwae = get_miwae(args_dict=args_dict, encoder=encoder, decoder=decoder, decoder_mask=decoder_mask)
     miwae = miwae.to(device)
-    if args_dict["use_backpack"] :
-        miwae = extend(miwae)
 
            
 
@@ -103,26 +101,31 @@ if __name__ == "__main__":
     # Get optimizer :
     optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=args_dict["lr_encoder"])
     optimizer_decoder = torch.optim.Adam(decoder.parameters(), lr=args_dict["lr_decoder"])
+    optimizer_list = [optimizer_encoder, optimizer_decoder]
     if args_dict["model_masking_process"]:
         optimizer_decoder_mask = torch.optim.Adam(decoder_mask.parameters(), lr=args_dict["lr_decoder_mask"])
         miwae.compile(optim_encoder=optimizer_encoder, optim_decoder=optimizer_decoder, optim_decoder_mask=optimizer_decoder_mask)
+        optimizer_list.append(optimizer_decoder_mask)
     else :
         miwae.compile(optim_encoder=optimizer_encoder, optim_decoder=optimizer_decoder)
 
 
     # Get loader :
     train_loader, _ = get_dataloader(dataset=dataset_train,args = args_dict, onepass = onepass,)
-    # train_loader = torch.utils.data.DataLoader(dataset_train, batch_sampler=batch_sampler, num_workers=1)  
-    # print(next(iter(train_loader)))
     test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args_dict["batch_size"], shuffle=False,
                                               drop_last=True, num_workers=4)
     
+    # Get trainer step :
+    trainer_step = get_trainer_step(args_dict["batch_sampler"], args_dict["statistics_calculation"], )
+    trainer_step = trainer_step(onepass=onepass, optim_list = optimizer_list, )
+    
+
     # Train
     best_valid_log_likelihood= -float('inf')
     eval(iteration = 0, one_pass=onepass, val_loader=test_loader, writer=writer, args=args_dict, best_valid_log_likelihood=best_valid_log_likelihood, sample = True)
     for epoch in range(args_dict["nb_epoch"]):
         train_epoch(epoch=epoch,
-                    one_pass=onepass,
+                    trainer_step=trainer_step,
                     train_loader=train_loader,
                     args=args_dict,
                     writer=writer,

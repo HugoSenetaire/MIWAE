@@ -1,0 +1,13 @@
+batch_sampler : StratifiedSamplerAdaptiveSampling
+input_for_strata : mask
+nb_strata : 3
+batch_size : 64
+calculate_variance_manually : False
+use_backpack : True
+nepoch : 5
+lr : 0.0001 # 1e-4
+no_flush : False
+network : ConvClassifier
+activation : LogSoftmax
+save_test_every_step : 10
+statistics_calculation : second_order

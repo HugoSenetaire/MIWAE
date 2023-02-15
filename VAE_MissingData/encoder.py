@@ -11,7 +11,7 @@ class Encoder(nn.Module):
 
         self.dist = None
 
-    def forward(self, x, mc_sample_z=None, iwae_sample_z = None,):
+    def forward(self, x, iwae_sample_z=None, mc_sample_z = None,):
         _out = self.encoder_network(x)
 
         self.dist = self.reparam_trick(_out)
@@ -20,9 +20,9 @@ class Encoder(nn.Module):
         if iwae_sample_z is None :
             iwae_sample_z = 1
 
-        _z = self.reparam_trick.rsample([iwae_sample_z, mc_sample_z])
-
-
+        batch_size = x.shape[0]
+        parameters = _out.unsqueeze(1).unsqueeze(1).expand(batch_size, iwae_sample_z, mc_sample_z, -1)
+        self.dist_expanded = self.reparam_trick(parameters)
+        _z = self.reparam_trick.rsample(parameters)
         
-
-        return _out, _z, self.dist
+        return _out, _z, self.dist_expanded

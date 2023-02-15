@@ -18,11 +18,11 @@ class ConvDecoderMNIST(nn.Module):
                                         nn.ConvTranspose2d(in_channels=32, out_channels=32, kernel_size=5, stride=2, padding=2),
                                         nn.ReLU(),
                                         nn.ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=5, stride=2, padding=2, output_padding=1),
-                                        nn.ReLU(),
-                                        nn.ConvTranspose2d(in_channels=16, out_channels=self.out_channel, kernel_size=5, stride=2, padding=2, output_padding=1),
-                                    )
+                                        nn.ReLU(),)
+        self.last_conv_layer = nn.ConvTranspose2d(in_channels=16, out_channels=self.out_channel, kernel_size=5, stride=2, padding=2, output_padding=1)
+                                
 
     def forward(self, x):
-        # print(x.shape)
         _out = self.conv_layers(x)
+        _out = self.last_conv_layer(_out)
         return _out

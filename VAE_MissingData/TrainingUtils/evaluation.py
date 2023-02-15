@@ -4,7 +4,6 @@ try :
     import wandb
 except:
     pass
-from .train_utils import Onepass
 import os
 
 def save_samples(VAE, args, iteration = -1):
@@ -84,8 +83,8 @@ def eval(iteration, one_pass, val_loader, args, best_valid_log_likelihood = -flo
 
             # for now I am not using IWAE bound
             _, output_dict = one_pass(sample = batch_input, return_dict = True)
-            valid_iwae = output_dict['iwae_bound'] * batch_size
-            valid_elbo = output_dict['vae_bound'] * batch_size
+            valid_iwae = output_dict['iwae_bound'].sum()
+            valid_elbo = output_dict['vae_bound'].sum()
             valid_log_like += valid_elbo
             valid_iwae_log_like += valid_iwae
 
@@ -105,7 +104,7 @@ def eval(iteration, one_pass, val_loader, args, best_valid_log_likelihood = -flo
         if sample :
             save_samples(VAE, args, iteration=iteration)
             save_samples_cond(VAE, args, val_loader, iteration=iteration)
-            save_samples_cond_importance(VAE, args, val_loader, iteration=iteration)
+            # save_samples_cond_importance(VAE, args, val_loader, iteration=iteration)
         
         if avg_valid > best_valid_log_likelihood:
             best_valid_log_likelihood = avg_valid

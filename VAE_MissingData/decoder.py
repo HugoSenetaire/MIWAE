@@ -17,6 +17,7 @@ class Decoder(nn.Module):
             n_samples = 1
 
         self.dist = self.reparam_trick(_out)
-        _x = self.dist.sample([n_samples])
+        _out = _out.unsqueeze(1).expand(_out.shape[0], n_samples, *_out.shape[1:])
+        _x = self.reparam_trick(_out).sample()
 
         return _x.flatten(0,1), self.dist
