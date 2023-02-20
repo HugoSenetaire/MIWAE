@@ -87,14 +87,37 @@ def eval(iteration, one_pass, val_loader, args, best_valid_log_likelihood = -flo
             valid_elbo = output_dict['vae_bound'].sum()
             valid_log_like += valid_elbo
             valid_iwae_log_like += valid_iwae
+        
 
+        # compute the final avg elbo for the validation set
+        avg_valid_iwae = valid_iwae_log_like / valid_obs
+        avg_valid = valid_log_like / valid_obs
+        print('Validation ELBO masked: ', avg_valid)
+        print('Validation IWAE masked: ', avg_valid_iwae)
+        dic_perf = {'valid_elbo_mask': avg_valid.item(), 'valid_iwae_mask': avg_valid_iwae.item(), }
+
+        valid_log_like = 0
+        # valid_log_likelihood = 0
+        valid_iwae_log_like = 0
+        valid_obs = 0
+        for j, batch_input in enumerate(val_loader):
+            batch_size = batch_input['data'].shape[0]
+            batch_input['mask'] = torch.ones_like(batch_input['mask'])
+            valid_obs += batch_size
+
+            # for now I am not using IWAE bound
+            _, output_dict = one_pass(sample = batch_input, return_dict = True)
+            valid_iwae = output_dict['iwae_bound'].sum()
+            valid_elbo = output_dict['vae_bound'].sum()
+            valid_log_like += valid_elbo
+            valid_iwae_log_like += valid_iwae
 
         # compute the final avg elbo for the validation set
         avg_valid_iwae = valid_iwae_log_like / valid_obs
         avg_valid = valid_log_like / valid_obs
         print('Validation ELBO: ', avg_valid)
         print('Validation IWAE: ', avg_valid_iwae)
-        dic_perf = {'valid_elbo': avg_valid, 'valid_iwae': avg_valid_iwae, }
+        dic_perf.update({'valid_elbo': avg_valid.item(), 'valid_iwae': avg_valid_iwae.item(), })
 
         for k, v in dic_perf.items():
             writer.add_scalar(k, v, iteration)
