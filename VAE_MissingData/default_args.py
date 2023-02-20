@@ -34,6 +34,7 @@ def default_args_miwae(parser = None):
     parser.add_argument("--lr_encoder", type = float, default = 1e-3)
     parser.add_argument("--lr_decoder", type = float, default = 1e-3)
     parser.add_argument("--lr_decoder_mask", type = float, default = 1e-3)
+    parser.add_argument("--optimizer", type = str, default = "Adam")
     parser.add_argument("--constant_imputation", type = int, default = 0)
 
     

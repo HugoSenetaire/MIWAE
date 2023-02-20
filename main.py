@@ -99,11 +99,24 @@ if __name__ == "__main__":
     onepass = Onepass(model = miwae, iwae_z=args_dict["iwae_z"], mc_z=args_dict["mc_z"])
 
     # Get optimizer :
-    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=args_dict["lr_encoder"])
-    optimizer_decoder = torch.optim.Adam(decoder.parameters(), lr=args_dict["lr_decoder"])
+
+    if args_dict["optimizer"] == "Adam":
+        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=args_dict["lr_encoder"])
+        optimizer_decoder = torch.optim.Adam(decoder.parameters(), lr=args_dict["lr_decoder"])
+    elif args_dict["optimizer"] == "SGD_no_momentum":
+        optimizer_encoder = torch.optim.SGD(encoder.parameters(), lr=args_dict["lr_encoder"], momentum=0.0)
+        optimizer_decoder = torch.optim.SGD(decoder.parameters(), lr=args_dict["lr_decoder"], momentum=0.0)
+    elif args_dict["optimizer"] == "SGD":
+        optimizer_encoder = torch.optim.SGD(encoder.parameters(), lr=args_dict["lr_encoder"])
+        optimizer_decoder = torch.optim.SGD(decoder.parameters(), lr=args_dict["lr_decoder"])
     optimizer_list = [optimizer_encoder, optimizer_decoder]
     if args_dict["model_masking_process"]:
-        optimizer_decoder_mask = torch.optim.Adam(decoder_mask.parameters(), lr=args_dict["lr_decoder_mask"])
+        if args_dict["optimizer"] == "Adam":
+            optimizer_decoder_mask = torch.optim.Adam(decoder_mask.parameters(), lr=args_dict["lr_decoder_mask"])
+        elif args_dict["optimizer"] == "SGD_no_momentum":
+            optimizer_decoder_mask = torch.optim.SGD(decoder_mask.parameters(), lr=args_dict["lr_decoder_mask"], momentum=0.0)
+        elif args_dict["optimizer"] == "SGD":
+            optimizer_decoder_mask = torch.optim.SGD(decoder_mask.parameters(), lr=args_dict["lr_decoder_mask"])
         miwae.compile(optim_encoder=optimizer_encoder, optim_decoder=optimizer_decoder, optim_decoder_mask=optimizer_decoder_mask)
         optimizer_list.append(optimizer_decoder_mask)
     else :
