@@ -35,9 +35,6 @@ def train_epoch(trainer_step,
         if hasattr(train_loader, 'batch_sampler') and hasattr(train_loader.batch_sampler, 'update_p_i'):
             train_loader.batch_sampler.update_p_i()  
 
-        # print(output_dict['kl'].shape)
-        # print("log_pz", output_dict['log_pz'].shape)
-        # tmp_kl += output_dict['kl'].sum().item()
         tmp_kl.append(output_dict['kl'].sum().item())
         tmp_likelihood.append(output_dict['likelihood'].sum().item())
         tmp_vae_elbo.append(output_dict['vae_bound'].sum().item())
@@ -45,10 +42,13 @@ def train_epoch(trainer_step,
         obs_in_epoch.append(output_dict['batch_size'])
 
         writer.add_scalar('train/KL',torch.tensor(np.sum(tmp_kl[-10:])/np.sum(obs_in_epoch[-10:])) , iteration)
+        print("KL", np.sum(tmp_kl[-10:])/np.sum(obs_in_epoch[-10:]))
         writer.add_scalar('train/likelihood',torch.tensor(np.sum(tmp_likelihood[-10:])/np.sum(obs_in_epoch[-10:])), iteration)
+        print("likelihood", np.sum(tmp_likelihood[-10:])/np.sum(obs_in_epoch[-10:]))
         writer.add_scalar('train/vae_elbo',torch.tensor(np.sum(tmp_vae_elbo[-10:])/np.sum(obs_in_epoch[-10:])), iteration)
+        print("vae_elbo", np.sum(tmp_vae_elbo[-10:])/np.sum(obs_in_epoch[-10:]))
         writer.add_scalar('train/iwae_elbo',torch.tensor(np.sum(tmp_iwae_elbo[-10:])/np.sum(obs_in_epoch[-10:])), iteration)
-
+        print("iwae_elbo", np.sum(tmp_iwae_elbo[-10:])/np.sum(obs_in_epoch[-10:]))
         if iteration % 100 == 0:
             current_kl = np.sum(tmp_kl) / np.sum(obs_in_epoch)
             current_likelihood = np.sum(tmp_likelihood) / np.sum(obs_in_epoch)
@@ -78,6 +78,10 @@ def train_epoch(trainer_step,
                 writer.add_scalar('train/n_i_{}'.format(k), train_loader.batch_sampler.n_i[k], iteration)
         del batch
 
+        for key in output_dict.keys():
+            if key.startswith("count_grad") or key.startswith("sum_grad"):
+                writer.add_scalar('train/{}'.format(key), output_dict[key], iteration)
+
     print(
         "epoch {0}/{1}, train VAE ELBO: {2:.2f}, train IWAE bound: {3:.2f}, train likelihod: {4:-2f}, train KL: {5:.2f}"
             .format(epoch, args["nb_epoch"], np.sum(tmp_vae_elbo) / np.sum(obs_in_epoch),
@@ -85,8 +89,4 @@ def train_epoch(trainer_step,
                         np.sum(tmp_likelihood) / np.sum(obs_in_epoch), 
                         np.sum(tmp_kl) / np.sum(obs_in_epoch)))
 
-    if args["use_wandb"]:
-        wandb.log({
-            "epoch": epoch, "train VAE ELBO": tmp_vae_elbo / obs_in_epoch,
-            'train IWAE bound': tmp_iwae_elbo / obs_in_epoch,
-            "train likelihod": tmp_likelihood / obs_in_epoch, "train KL": tmp_kl / obs_in_epoch})
+   
