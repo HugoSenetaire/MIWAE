@@ -45,10 +45,10 @@ class MIWAE_VAE(nn.Module):
         param_z = self.encoder.encoder_network(current_input,)
         param_z = param_z.unsqueeze(1).unsqueeze(1).expand(batch_size, iwae_sample_z, mc_sample_z, -1)
         if sample_pathwise is None:
-            sample_pathwise = self.encoder.reparam_trick.sample_pathwise((batch_size, iwae_sample_z, mc_sample_z, self.encoder.latent_dim))
+            sample_pathwise = self.encoder.reparam_trick.sample_pathwise((batch_size, iwae_sample_z, mc_sample_z, self.encoder.latent_dim)).to(param_z.device)
         sample_pathwise = sample_pathwise.reshape(batch_size, iwae_sample_z, mc_sample_z, self.encoder.latent_dim)
 
-        _z = self.encoder.reparam_trick.rsample(param_z,sample_pathwise)
+        _z = self.encoder.reparam_trick.rsample(param_z, sample_pathwise)
         log_pz = -0.5 * torch.log(torch.tensor(2*torch.pi, device=_z.device)) - (_z**2)/2
         log_qz = self.encoder.reparam_trick.log_prob(_z, param_z,)
         kl = (log_qz - log_pz).reshape(batch_size, iwae_sample_z, mc_sample_z, -1).sum(-1)
