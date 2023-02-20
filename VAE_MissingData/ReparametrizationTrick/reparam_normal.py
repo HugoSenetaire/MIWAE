@@ -21,8 +21,8 @@ class ReparamTrickNormal(ReparamTrick):
     def rsample(self, parameters, pathwise_sample = None, ):
         mu, log_var = parameters.chunk(2, dim=-1)
         if pathwise_sample is None:
-            pathwise_sample = self.sample_pathwise(mu.shape)
-        
+            pathwise_sample = self.sample_pathwise(mu.shape).to(mu.device)
+
         z = pathwise_sample * (0.5 * log_var).exp() + mu
         return z
 

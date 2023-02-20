@@ -92,7 +92,8 @@ class TrainerStepFunctorchGradNorm(TrainerStepDefault):
         self.fmodel, self.params, self.buffers = make_functional_with_buffers(self.onepass.model)
 
         in_dims = (None, None, 0, 0, 0, None, None, 0)
-        data, mask, weights = sample["data"], sample["mask"], sample["weights"]
+        device = next(self.onepass.model.parameters()).device
+        data, mask, weights = sample["data"].to(device), sample["mask"].to(device), sample["weights"].to(device)
         batch_size = data.shape[0]
         
 
@@ -101,10 +102,8 @@ class TrainerStepFunctorchGradNorm(TrainerStepDefault):
 
         iwae_z = self.onepass.iwae_z
         mc_z = self.onepass.mc_z
-        # data_expanded = data.unsqueeze(1).unsqueeze(1).expand(batch_size, iwae_z, mc_z, *data.shape[1:])
-        # mask_expanded = mask.unsqueeze(1).unsqueeze(1).expand(batch_size, iwae_z, mc_z, *mask.shape[1:])
         latent_dim = self.onepass.model.encoder.latent_dim
-        pathwise_sample = self.onepass.model.encoder.reparam_trick.sample_pathwise((batch_size, iwae_z, mc_z, 1, latent_dim))
+        pathwise_sample = self.onepass.model.encoder.reparam_trick.sample_pathwise((batch_size, iwae_z, mc_z, 1, latent_dim)).to(data.device)
 
         grad_weight_per_example, (loss, output_dict) = self.ft_compute_sample_grad(self.params,
                                                             self.buffers,
@@ -115,37 +114,34 @@ class TrainerStepFunctorchGradNorm(TrainerStepDefault):
                                                             mc_z,
                                                             pathwise_sample,)
 
-        # self.single_gradient_test(grad_weight_per_example, data_expanded, mask, pathwise_sample, iwae_z, mc_z)
-        # self.single_gradient_test_2(grad_weight_per_example, data_expanded, mask_expanded, pathwise_sample, iwae_z, mc_z)
-        # self.average_gradient_test(grad_weight_per_example, data, mask, iwae_z, mc_z)
-        # self.average_gradient_test2(grad_weight_per_example, data, mask, iwae_z, mc_z)
-
 
         loss_total = loss.mean()
         output_dict["batch_size"] = batch_size
         batch_sampler = loader_train.batch_sampler
         nb_strata = batch_sampler.nb_strata
 
-        count_grad = torch.stack([torch.sum(sample["strata"]==i) for i in range(nb_strata)])
+        count_grad = torch.stack([torch.count_nonzero(sample["strata"]==i) for i in range(nb_strata)])
         sum_grad_2_per_sample = torch.zeros(batch_size,)
         for i, param in enumerate(self.onepass.model.parameters()):
             param.grad = grad_weight_per_example[i].mean(dim=0).detach()
             if torch.any(torch.isnan(param.grad)):
                 logging.warning("Nan in grad")
                 assert 1==0
-            sum_grad_2_per_sample += (grad_weight_per_example[i].flatten(1)**2).sum(dim =1).detach()
+            sum_grad_2_per_sample += (grad_weight_per_example[i].flatten(1)**2).sum(dim =1).detach().cpu()
 
-        sum_grad_2_per_sample = sum_grad_2_per_sample/(sample["weights"]**2)
+        sum_grad_2_per_sample = sum_grad_2_per_sample/(sample["weights"].detach().cpu()**2)
 
         sum_grad = torch.zeros(nb_strata,)
         for strata in range(nb_strata):
             sample_indexes = torch.where(sample["strata"]==strata)[0]
-            sum_grad[strata] = sum_grad_2_per_sample[sample_indexes].mean()
+            sum_grad[strata] = sum_grad_2_per_sample[sample_indexes].sum()
+            output_dict["sum_grad_2_per_sample_{}".format(strata)] = sum_grad_2_per_sample[sample_indexes].sum().item()
+            output_dict["count_grad_{}".format(strata)] = count_grad[strata]
         
-
         if hasattr(batch_sampler, "fischer_information_approximation") :
             batch_sampler.fischer_information_approximation.update(self.onepass.model)
         batch_sampler.update_grad(sum_grad, count_grad,)   
+        
 
       
 

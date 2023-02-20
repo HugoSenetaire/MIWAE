@@ -59,5 +59,8 @@ class TrainerStepBackpackBatch(TrainerStepDefault):
             batch_sampler.fischer_information_approximation.update(self.onepass.model)
         sig_f, count_grad = get_gradnorm_from_backpack_batch(self.onepass.model, strata_per_sample, batch_sampler, sample["weights"])
         
+        for param in self.onepass.model.parameters():
+            param.grad /= sample["weights"].shape[0]
+
         batch_sampler.update_grad(sig_f, count_grad)   
         return loss

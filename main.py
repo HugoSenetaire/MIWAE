@@ -148,8 +148,6 @@ if __name__ == "__main__":
                     best_valid_log_likelihood=best_valid_log_likelihood)
 
     
-    # Test
-    eval(epoch = epoch+1, one_pass=onepass, test_loader=test_loader, args=args_dict)
 
     # Save model :
-    torch.save(miwae.state_dict(), args_dict["path_save_model"])
+    torch.save(miwae.state_dict(), args_dict["model_dir"])
