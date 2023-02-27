@@ -49,35 +49,35 @@ class TrainerStepFunctorchGradNorm(TrainerStepDefault):
     #         list_grad_to_compare = torch.cat([grad_weight_to_compare[i][k].flatten() for i in range(len(grad_weight_to_compare))])
     #         print((list_grad - list_grad_to_compare).abs().sum())
 
-    def average_gradient_test(self,grad_weight_to_compare, data, mask, iwae_z, mc_z):
-        list_grad_to_compare = torch.cat([grad_weight_to_compare[i].mean(dim = 0).flatten() for i in range(len(grad_weight_to_compare))])
-        batch_size = data.shape[0]
+    # def average_gradient_test(self,grad_weight_to_compare, data, mask, iwae_z, mc_z):
+    #     list_grad_to_compare = torch.cat([grad_weight_to_compare[i].mean(dim = 0).flatten() for i in range(len(grad_weight_to_compare))])
+    #     batch_size = data.shape[0]
 
-        for optim in self.optim_list:
-            optim.zero_grad()
-        (loss, output_dict) = self.onepass.model(data, mask, iwae_z, mc_z, )
-        loss = loss.mean().backward()
-        list_grad = list(self.onepass.model.parameters())
-        list_grad = torch.cat([p.grad.flatten().detach().clone() for p in list_grad])
-        print("")
-        print(list_grad.mean())
-        print(list_grad_to_compare.mean())
-        print("AVERAGE GRADIENT ERROR", (list_grad - list_grad_to_compare).abs().mean())
-        print("=================================")
+    #     for optim in self.optim_list:
+    #         optim.zero_grad()
+    #     (loss, output_dict) = self.onepass.model(data, mask, iwae_z, mc_z, )
+    #     loss = loss.mean().backward()
+    #     list_grad = list(self.onepass.model.parameters())
+    #     list_grad = torch.cat([p.grad.flatten().detach().clone() for p in list_grad])
+    #     print("")
+    #     print(list_grad.mean())
+    #     print(list_grad_to_compare.mean())
+    #     print("AVERAGE GRADIENT ERROR", (list_grad - list_grad_to_compare).abs().mean())
+    #     print("=================================")
 
-    def average_gradient_test2(self, grad_weight_to_compare, data, mask, iwae_z, mc_z):
-        list_grad_to_compare = torch.cat([grad_weight_to_compare[i].mean(dim=0).flatten() for i in range(len(grad_weight_to_compare))])
-        for optim in self.optim_list:
-            optim.zero_grad()
+    # def average_gradient_test2(self, grad_weight_to_compare, data, mask, iwae_z, mc_z):
+    #     list_grad_to_compare = torch.cat([grad_weight_to_compare[i].mean(dim=0).flatten() for i in range(len(grad_weight_to_compare))])
+    #     for optim in self.optim_list:
+    #         optim.zero_grad()
 
-        (loss, output_dict) = self.onepass.model.forward_original(data, mask, pathwise_sample=None, iwae_sample_z = iwae_z, mc_sample_z =  mc_z, )
-        loss = loss.mean().backward()
-        list_grad = list(self.onepass.model.parameters())
-        list_grad = torch.cat([p.grad.flatten().detach().clone() for p in list_grad])
-        print(list_grad.mean())
-        print(list_grad_to_compare.mean())
-        print("AVERAGE GRADIENT ERROR", (list_grad - list_grad_to_compare).abs().mean())
-        print("=================================")
+    #     (loss, output_dict) = self.onepass.model.forward_original(data, mask, pathwise_sample=None, iwae_sample_z = iwae_z, mc_sample_z =  mc_z, )
+    #     loss = loss.mean().backward()
+    #     list_grad = list(self.onepass.model.parameters())
+    #     list_grad = torch.cat([p.grad.flatten().detach().clone() for p in list_grad])
+    #     print(list_grad.mean())
+    #     print(list_grad_to_compare.mean())
+    #     print("AVERAGE GRADIENT ERROR", (list_grad - list_grad_to_compare).abs().mean())
+    #     print("=================================")
         
     def _compute_loss_stateless_model(self, params, buffers, data, mask, weights, iwae_z, mc_z, sample_pathwise ):
         data = data.unsqueeze(0)
@@ -85,6 +85,8 @@ class TrainerStepFunctorchGradNorm(TrainerStepDefault):
         sample_pathwise = sample_pathwise.unsqueeze(0)
         output, output_dict = self.fmodel(params, buffers, data, mask, iwae_z, mc_z, sample_pathwise)
         loss_per_sample = -output.sum()*weights
+        output_dict["iwae_bound"] = output_dict["iwae_bound"] * weights
+        output_dict["vae_bound"] = output_dict["vae_bound"] * weights
         return loss_per_sample.sum(), (loss_per_sample,  output_dict)
         
 

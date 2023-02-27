@@ -29,7 +29,7 @@ def update_config_from_paths(args_dict,):
 def default_args(parser = None):
     if parser is None:
         parser = argparse.ArgumentParser()
-    parser = default_args_missingdatadataset(parser = parser, root_default="./local/")
+    parser = default_args_missingdatadataset(parser = parser, root_default="/scratch/hhjs/miwae/")
     parser = default_args_miwae(parser = parser)
     parser = default_args_data_loading(parser = parser)
 

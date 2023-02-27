@@ -25,8 +25,10 @@ def save_samples_cond(VAE, args, val_loader, iteration = -1, n_samples = 7, nb_i
         inputs = next(iter(val_loader))['data'][:nb_inputs].to(device)
         masks = next(iter(val_loader))['mask'][:nb_inputs].to(device)
         masked_input = inputs * masks + (1 - masks)*0.1
-        samples = VAE.sample_from_input(inputs, masks, n_samples = n_samples)
 
+        samples = VAE.sample_from_input(inputs, masks, n_samples = n_samples)
+        samples = samples.reshape(inputs.shape[0], n_samples, *samples.shape[1:]).permute(1,0,2,3,4).flatten(0,1)
+        
         inputs_expanded = inputs.unsqueeze(0).expand(n_samples, -1, -1, -1, -1).flatten(0, 1)
         masks_expanded = masks.unsqueeze(0).expand(n_samples, -1, -1, -1, -1).flatten(0, 1)
         samples_mix = samples * (1-masks_expanded) + masks_expanded*inputs_expanded

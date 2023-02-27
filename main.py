@@ -10,8 +10,63 @@ from VAE_MissingData.TrainingUtils import train_epoch, eval, Onepass, get_traine
 from VAE_MissingData.StratifiedSGDforMissingData import get_dataloader
 from backpack import extend
 from tensorboardX import SummaryWriter
+import matplotlib.pyplot as plt
+
 
 import warnings
+
+
+def analyze_index_strata_correspondence(train_loader, args_dict, writer,):
+     if hasattr(train_loader, "batch_sampler"):
+        if hasattr(train_loader.batch_sampler, "index_strata_correspondence"):
+            current_index_strata_correspondence = train_loader.batch_sampler.index_strata_correspondence
+            nb_strata = np.unique(current_index_strata_correspondence).shape[0]
+            mask_dim = np.prod(train_loader.dataset.__getitem__(0)["mask"].shape[1:])
+
+            nb_missing_data = {}
+            targets = {}
+            nb_targets = np.unique(np.stack([train_loader.dataset.__getitem__(index)["target"] for index in range(len(train_loader.dataset))])).shape[0]
+            for i in range(nb_strata):
+                indexes = np.where(current_index_strata_correspondence == i)[0]
+                current_missing = torch.stack([1-train_loader.dataset.__getitem__(index)["mask"] for index in indexes])
+                current_target = torch.stack([train_loader.dataset.__getitem__(index)["target"] for index in indexes])
+                nb_missing_data[i] = (1 - current_missing).flatten(1).sum(1)
+                targets[i] = current_target
+
+            nb_lines = int(np.ceil(nb_strata/5.))
+            nb_cols = 5
+            fig, axs = plt.subplots(nrows=nb_lines, ncols=nb_cols, figsize=(nb_cols *4, nb_lines*4))
+            bins = np.linspace(0, mask_dim, 101)
+            for i in range(nb_strata):
+                if nb_lines > 1 :
+                    axs[i//5, i%5].hist(nb_missing_data[i].numpy(), bins=bins,)
+                    # axs[i//5, i%5].set_xlabel("Number of missing data")
+                    # axs[i//5, i%5].set_ylabel("Number of samples")
+                    axs[i//5, i%5].set_title("Histogram strata {}".format(i))
+                else :
+                    axs[i%5].hist(nb_missing_data[i].numpy(), bins=bins,)
+            plt.title("Histogram nb_missing")
+            plt.savefig(os.path.join(args_dict["log_dir"], "Histogram_nb_missing.png"))
+            writer.add_figure("Histogram nb_missing", plt.gcf())
+            plt.close()
+
+            fig, axs = plt.subplots(nrows=nb_lines, ncols=nb_cols, figsize=(nb_cols *4, nb_lines*4))
+            bins_target = np.arange(0, nb_targets+1, 1)-0.5
+            for i in range(nb_strata):
+                if nb_lines>1 :
+                    axs[i//5, i%5].hist(targets[i].numpy(), bins=bins_target, )
+                    # axs[i//5, i%5].set_xticks(np.arange(nb_targets), np.arange(nb_targets))
+                    # axs[i//5, i%5].set_xlabel("Target")
+                    # axs[i//5, i%5].set_ylabel("Number of samples")
+                    axs[i//5, i%5].set_title("Histogram strata {}".format(i))
+                else :
+                    axs[i%5].hist(targets[i].numpy(), bins=bins_target, )
+            plt.title("Histogram target".format(i))
+            plt.savefig(os.path.join(args_dict["log_dir"], "Histogram_target.png"))
+            writer.add_figure("Histogram target".format(i), plt.gcf())
+            plt.close()
+
+            
 
 def create_path(args_dict):
     args_dict["model_dir"] = os.path.join(args_dict["root_dir"], "weights")
@@ -19,14 +74,19 @@ def create_path(args_dict):
         os.makedirs(args_dict["model_dir"])
 
     if "name_experiment" not in args_dict.keys() or args_dict["name_experiment"] is None:
-        args_dict["name_experiment"] = ""
-        if args_dict["yamlmodel"] is not None:
-            args_dict["name_experiment"] += args_dict["yamlmodel"].split("/")[-1].split(".")[0] +"_"
         if args_dict["yamldataset"] is not None:
-            args_dict["name_experiment"] += args_dict["yamldataset"].split("/")[-1].split(".")[0] +"_"
+            args_dict["name_experiment"] = args_dict["yamldataset"].split("/")[-1].split(".")[0]
+        else :
+            args_dict["name_experiment"] = args_dict["dataset_name"]
+
+        if args_dict["yamlmodel"] is not None:
+            args_dict["name_experiment"] = os.path.join(args_dict["name_experiment"], args_dict["yamlmodel"].split("/")[-1].split(".")[0])
+
         if args_dict["yamlbatchsampler"] is not None:
-            args_dict["name_experiment"] += args_dict["yamlbatchsampler"].split("/")[-1].split(".")[0] +"_"
-        
+            args_dict["name_experiment"] = os.path.join(args_dict["name_experiment"], args_dict["yamlbatchsampler"].split("/")[-1].split(".")[0])
+        else :
+            args_dict["name_experiment"] = os.path.join(args_dict["name_experiment"], args_dict["batch_sampler"])
+
         args_dict["name_experiment"] += time.strftime("%Y%m%d_%H%M%S")
     
     complete_weights_path = os.path.join(args_dict["model_dir"], args_dict["name_experiment"])
@@ -125,9 +185,13 @@ if __name__ == "__main__":
 
     # Get loader :
     train_loader, _ = get_dataloader(dataset=dataset_train,args = args_dict, onepass = onepass,)
+    train_loader_aux, _ = get_dataloader(dataset=dataset_train,args = args_dict, onepass = onepass,)
     test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args_dict["batch_size"], shuffle=False,
                                               drop_last=True, num_workers=4)
-    
+
+    analyze_index_strata_correspondence(train_loader, args_dict, writer=writer,)
+
+   
     # Get trainer step :
     trainer_step = get_trainer_step(args_dict["batch_sampler"], args_dict["statistics_calculation"], )
     trainer_step = trainer_step(onepass=onepass, optim_list = optimizer_list, )

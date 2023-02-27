@@ -26,7 +26,7 @@ def default_args_miwae(parser = None):
     parser.add_argument("--mc_z_test", type = int, default=1)
     parser.add_argument("--mc_z", type = int, default=1)
 
-    parser.add_argument("--root_dir", type = str, default="./local/")
+    parser.add_argument("--root_dir", type = str, default="/scratch/hhjs/miwae/")
     parser.add_argument("--latent_dim", type = int, default = 10)
 
     parser.add_argument("--use_wandb", action="store_true")

@@ -18,7 +18,7 @@ def transpose(sample,):
     return list_of_sample
 
 
-def calculate_single_grad(list_parameter, current_sample, sig_f, previous_grad = {}):
+def calculate_single_grad(list_parameter, current_sample, sig_f, previous_grad = {},):
     current_strata = current_sample["strata"]
 
     for name, p in list_parameter:
@@ -26,11 +26,10 @@ def calculate_single_grad(list_parameter, current_sample, sig_f, previous_grad =
             if torch.isnan(p.grad).any():
                 assert False
             if name not in previous_grad.keys():
-                sig_f[current_strata] += torch.sum((p.grad/current_sample["weights"])**2).detach().cpu()   # TODO : Can be accelaerated by using the fact that the weights 
-                                                                                            # are the same for all the sample in a single strata
+                sig_f[current_strata] += torch.sum((p.grad/current_sample["weights"])**2).detach().cpu()   # TODO : Can be accelaerated by using the fact that the weights                                                                        
+                                                                                                            # are the same for all the sample in a single strata
             else :
                 sig_f[current_strata] += torch.sum(((p.grad-previous_grad[name])/current_sample["weights"])**2).detach().cpu()
-
 
             previous_grad[name] = p.grad.detach().clone()
 
@@ -62,6 +61,8 @@ class TrainerStepManualGradNorm(TrainerStepDefault):
             loss = loss*current_sample["weights"]
             loss_total += loss.detach().cpu().item()
             loss.backward(retain_graph=False)
+            current_dict["iwae_bound"] = current_dict["iwae_bound"] * current_sample["weights"] 
+            current_dict["vae_bound"] = current_dict["vae_bound"] * current_sample["weights"]
             previous_grad, sig_f = calculate_single_grad(list_parameter=list_parameter, current_sample=current_sample, sig_f=sig_f, previous_grad=previous_grad )
             for key in current_dict.keys():
                 if key in output_dict.keys():
@@ -83,6 +84,7 @@ class TrainerStepManualGradNorm(TrainerStepDefault):
         for strata in range(nb_strata):
             output_dict["sum_grad_2_per_sample_{}".format(strata)] = sig_f[strata].item()
             output_dict["count_grad_{}".format(strata)] = count_grad[strata]
+        
         
         
         if hasattr(loader_train, "fischer_information_approximation") :

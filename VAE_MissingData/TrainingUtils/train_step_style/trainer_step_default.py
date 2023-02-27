@@ -19,7 +19,7 @@ class TrainerStepDefault():
         return loss_per_instance.mean(), output_dict
 
 
-    def __call__(self, sample, loader_train, ):
+    def __call__(self, sample, loader_train, take_step = True ):
         self.onepass.model.train()
         for optim in self.optim_list:
             optim.zero_grad()
@@ -28,11 +28,14 @@ class TrainerStepDefault():
 
         loss, output_dict = self.backward_handler(sample, loader_train=loader_train)
        
+        norm_grad = torch.norm(torch.stack([torch.norm(p.grad.flatten()) for p in self.onepass.model.parameters() if p.grad is not None]),)
+        output_dict["norm_grad"] = norm_grad
             
-        for optim in self.optim_list:
-            optim.step()
-        for scheduler in self.scheduler_list:
-            scheduler.step()
+        if take_step :
+            for optim in self.optim_list:
+                optim.step()
+            for scheduler in self.scheduler_list:
+                scheduler.step()
 
         
 
