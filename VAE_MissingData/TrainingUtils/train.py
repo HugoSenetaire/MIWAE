@@ -3,6 +3,7 @@ import torch
 from backpack.extensions import BatchGrad, BatchL2Grad, Variance
 from backpack import backpack
 from .evaluation import eval
+from .train_step_style import trainer_step_default
 from ..loss_handler import WeightsMultiplication
 import numpy as np
 try :
@@ -13,9 +14,11 @@ except:
 
 
 
+
 def train_epoch(trainer_step,
                 train_loader,
                 args,
+                train_loader_aux = None,
                 epoch = -1,
                 writer = None,
                 test_loader = None,
@@ -34,6 +37,21 @@ def train_epoch(trainer_step,
         _, output_dict = trainer_step(batch,  loader_train = train_loader)
         if hasattr(train_loader, 'batch_sampler') and hasattr(train_loader.batch_sampler, 'update_p_i'):
             train_loader.batch_sampler.update_p_i()  
+
+        writer.add_scalar('train/norm_grad', output_dict['norm_grad'], iteration)
+        if train_loader_aux is not None and iteration%10 == 0 :
+            grads = []
+            if hasattr(train_loader_aux, 'batch_sampler') and hasattr(train_loader_aux.batch_sampler, 'update_p_i'):
+                train_loader_aux.batch_sampler.p_i = train_loader.batch_sampler.p_i
+            for k, sample in enumerate(iter(train_loader_aux)):
+                loss_per_instance, output_dict = trainer_step(sample = sample, loader_train = train_loader_aux, take_step = False)
+                grads += [torch.cat([p.grad.flatten() for p in trainer_step.onepass.model.parameters() if p.grad is not None])]
+                if k==10:
+                    break
+
+            variance_grad = torch.var(torch.stack(grads), dim = 0).sum(-1)
+            output_dict['variance_grad'] = variance_grad
+            writer.add_scalar('train/variance_grad', variance_grad, iteration)
 
         tmp_kl.append(output_dict['kl'].sum().item())
         tmp_likelihood.append(output_dict['likelihood'].sum().item())

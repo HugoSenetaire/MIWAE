@@ -140,6 +140,7 @@ if __name__ == "__main__":
         train_epoch(epoch=epoch,
                     trainer_step=trainer_step,
                     train_loader=train_loader,
+                    train_loader_aux = train_loader_aux,
                     args=args_dict,
                     writer=writer,
                     test_loader = test_loader,
