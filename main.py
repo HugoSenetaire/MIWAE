@@ -133,6 +133,7 @@ if __name__ == "__main__":
     # Get dataset
     complete_dataset, complete_masked_dataset = get_dataset(args_dict=args_dict)
     dataset_train = complete_masked_dataset.dataset_train
+    dataset_val = complete_masked_dataset.dataset_val
     dataset_test = complete_masked_dataset.dataset_test
 
    
@@ -184,8 +185,8 @@ if __name__ == "__main__":
 
 
     # Get loader :
-    train_loader, _ = get_dataloader(dataset=dataset_train,args = args_dict, onepass = onepass,)
-    train_loader_aux, _ = get_dataloader(dataset=dataset_train,args = args_dict, onepass = onepass,)
+    train_loader, strata_creator = get_dataloader(dataset=dataset_train,args = args_dict, onepass = onepass,)
+    val_loader, _ = get_dataloader(dataset=dataset_val,args = args_dict, onepass = onepass, strata_creator = strata_creator,)
     test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=args_dict["batch_size"], shuffle=False,
                                               drop_last=True, num_workers=4)
 
@@ -204,7 +205,7 @@ if __name__ == "__main__":
         train_epoch(epoch=epoch,
                     trainer_step=trainer_step,
                     train_loader=train_loader,
-                    train_loader_aux = train_loader_aux,
+                    val_loader = val_loader,
                     args=args_dict,
                     writer=writer,
                     test_loader = test_loader,
@@ -215,4 +216,7 @@ if __name__ == "__main__":
     
 
     # Save model :
-    torch.save(miwae.state_dict(), args_dict["model_dir"])
+    if not os.path.exists(args_dict["model_dir"]):
+        os.makedirs(args_dict["model_dir"])
+    model_path = os.path.join(args_dict["model_dir"], "model.pt")
+    torch.save(miwae.state_dict(), model_path)

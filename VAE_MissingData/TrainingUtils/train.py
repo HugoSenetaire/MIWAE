@@ -5,6 +5,7 @@ from backpack import backpack
 from .evaluation import eval
 from .train_step_style import trainer_step_default
 from ..loss_handler import WeightsMultiplication
+import copy
 import numpy as np
 try :
     import wandb
@@ -18,7 +19,7 @@ except:
 def train_epoch(trainer_step,
                 train_loader,
                 args,
-                train_loader_aux = None,
+                val_loader = None,
                 epoch = -1,
                 writer = None,
                 test_loader = None,
@@ -34,24 +35,39 @@ def train_epoch(trainer_step,
     pbar = tqdm(enumerate(train_loader))
     for i, batch in pbar:
         iteration = epoch * len(train_loader) + i
-        _, output_dict = trainer_step(batch,  loader_train = train_loader)
+        _, output_dict = trainer_step(batch, loader_train = train_loader)
         if hasattr(train_loader, 'batch_sampler') and hasattr(train_loader.batch_sampler, 'update_p_i'):
             train_loader.batch_sampler.update_p_i()  
 
         writer.add_scalar('train/norm_grad', output_dict['norm_grad'], iteration)
-        if train_loader_aux is not None and iteration%10 == 0 :
+        if iteration%10 == 0 :
             grads = []
-            if hasattr(train_loader_aux, 'batch_sampler') and hasattr(train_loader_aux.batch_sampler, 'update_p_i'):
-                train_loader_aux.batch_sampler.p_i = train_loader.batch_sampler.p_i
+            train_loader_aux = copy.deepcopy(train_loader)
+            print("Calculating variance of gradient on train_loader")
             for k, sample in enumerate(iter(train_loader_aux)):
-                loss_per_instance, output_dict = trainer_step(sample = sample, loader_train = train_loader_aux, take_step = False)
+                loss_per_instance, output_dict = trainer_step(sample = sample, loader_train = train_loader_aux, take_step = False, proportion_calculation = True)
                 grads += [torch.cat([p.grad.flatten() for p in trainer_step.onepass.model.parameters() if p.grad is not None])]
                 if k==10:
                     break
-
             variance_grad = torch.var(torch.stack(grads), dim = 0).sum(-1)
-            output_dict['variance_grad'] = variance_grad
+            output_dict['variance_grad_train'] = variance_grad
             writer.add_scalar('train/variance_grad', variance_grad, iteration)
+
+
+            if val_loader is not None :
+                grads = []
+                print("Calculating variance of gradient on val")
+                if hasattr(val_loader, 'batch_sampler') and hasattr(val_loader.batch_sampler, 'update_p_i'):
+                    val_loader.batch_sampler.p_i = train_loader.batch_sampler.p_i
+                for k, sample in enumerate(iter(val_loader)):
+                    loss_per_instance, output_dict = trainer_step(sample = sample, loader_train = val_loader, take_step = False)
+                    grads += [torch.cat([p.grad.flatten() for p in trainer_step.onepass.model.parameters() if p.grad is not None])]
+                    if k==10:
+                        break
+                variance_grad = torch.var(torch.stack(grads), dim = 0).sum(-1)
+                output_dict['variance_grad_val'] = variance_grad
+                writer.add_scalar('val/variance_grad', variance_grad, iteration)
+            torch.cuda.empty_cache() 
 
         tmp_kl.append(output_dict['kl'].sum().item())
         tmp_likelihood.append(output_dict['likelihood'].sum().item())
@@ -76,6 +92,7 @@ def train_epoch(trainer_step,
             pbar.write(desc, )
         
         if (iteration+1)%eval_iter == 0 and writer is not None:
+            print("Evaluating")
             eval(iteration= iteration, one_pass=trainer_step.onepass, val_loader=test_loader,
                 args=args, best_valid_log_likelihood=best_valid_log_likelihood, writer=writer, sample=True)
             # args=args, best_valid_log_likelihood=best_valid_log_likelihood, writer=writer, sample= ((iteration+1)%save_image_iter == 0))

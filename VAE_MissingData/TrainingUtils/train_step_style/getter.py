@@ -1,5 +1,5 @@
 from .trainer_step_default import TrainerStepDefault
-from .grad import TrainerStepFunctorchGradNorm, TrainerStepBackpackBatchL2, TrainerStepBackpackBatch, TrainerStepManualGradNorm
+from .grad import TrainerStepFunctorchGradNorm, TrainerStepBackpackBatchL2, TrainerStepBackpackBatch, TrainerStepManualGradNorm, TrainerStepProportionOnVal
 def get_trainer_step(sampler_name, statistic_calculation,):
     if sampler_name in ["StratifiedSamplerLipschitz", "StratifiedSamplerProportional", "StrataPersonalizedSampler",]:
         return TrainerStepDefault
@@ -16,6 +16,8 @@ def get_trainer_step(sampler_name, statistic_calculation,):
             return TrainerStepBackpackBatch
         elif statistic_calculation == "manual" :
             return TrainerStepManualGradNorm
+        elif statistic_calculation == "validation":
+            return TrainerStepProportionOnVal
         else :
             raise ValueError("Unknown statistic_calculation {}".format(statistic_calculation))
     else :
