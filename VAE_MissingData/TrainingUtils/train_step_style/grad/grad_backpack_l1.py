@@ -34,7 +34,7 @@ def get_gradnorm_from_backpack_batch(model, strata_rep, sampler, weights):
 
 
 class TrainerStepBackpackBatch(TrainerStepDefault):
-    def __init__(self, onepass,  optim_list, scheduler_list = []) -> None:
+    def __init__(self, onepass,  optim_list, scheduler_list = [], **kwargs) -> None:
         super().__init__(onepass,
                         optim_list,
                         scheduler_list = scheduler_list,

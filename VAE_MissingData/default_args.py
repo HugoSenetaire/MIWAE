@@ -36,6 +36,7 @@ def default_args_miwae(parser = None):
     parser.add_argument("--lr_decoder_mask", type = float, default = 1e-3)
     parser.add_argument("--optimizer", type = str, default = "Adam")
     parser.add_argument("--constant_imputation", type = int, default = 0)
+    parser.add_argument("--save_variance_every", type = int, default = 20)
 
     
     parser.add_argument('--nb_epoch', type=int, default=100)

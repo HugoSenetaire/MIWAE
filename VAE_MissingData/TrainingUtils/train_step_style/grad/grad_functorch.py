@@ -9,7 +9,7 @@ import logging
 import torch
 
 class TrainerStepFunctorchGradNorm(TrainerStepDefault):
-    def __init__(self, onepass,  optim_list, scheduler_list = []) -> None:
+    def __init__(self, onepass,  optim_list, scheduler_list = [], **kwargs) -> None:
         super().__init__(onepass,
                         optim_list,
                         scheduler_list = scheduler_list,

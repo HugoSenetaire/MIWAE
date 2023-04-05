@@ -84,7 +84,9 @@ def eval(iteration, one_pass, val_loader, args, best_valid_log_likelihood = -flo
             valid_obs += batch_size
 
             # for now I am not using IWAE bound
-            _, output_dict = one_pass(sample = batch_input, return_dict = True)
+            one_pass.iwae_z = args["iwae_z_test"]
+            one_pass.mc_z = args["mc_z_test"]
+            _, output_dict = one_pass(sample = batch_input, return_dict = True, )
             valid_iwae = output_dict['iwae_bound'].sum()
             valid_elbo = output_dict['vae_bound'].sum()
             valid_log_like += valid_elbo

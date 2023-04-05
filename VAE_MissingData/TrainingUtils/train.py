@@ -35,17 +35,19 @@ def train_epoch(trainer_step,
     pbar = tqdm(enumerate(train_loader))
     for i, batch in pbar:
         iteration = epoch * len(train_loader) + i
-        _, output_dict = trainer_step(batch, loader_train = train_loader)
+        trainer_step.onepass.iwae_z = args["iwae_z"]
+        trainer_step.onepass.mc_z = args["mc_z"]
+        _, output_dict = trainer_step(batch, loader_train = train_loader, loader_val = val_loader,  proportion_calculation = True)
         if hasattr(train_loader, 'batch_sampler') and hasattr(train_loader.batch_sampler, 'update_p_i'):
             train_loader.batch_sampler.update_p_i()  
 
         writer.add_scalar('train/norm_grad', output_dict['norm_grad'], iteration)
-        if iteration%10 == 0 :
+        if iteration % args["save_variance_every"] == 0 :
             grads = []
             train_loader_aux = copy.deepcopy(train_loader)
             print("Calculating variance of gradient on train_loader")
             for k, sample in enumerate(iter(train_loader_aux)):
-                loss_per_instance, output_dict = trainer_step(sample = sample, loader_train = train_loader_aux, take_step = False, proportion_calculation = True)
+                loss_per_instance, output_dict = trainer_step(sample = sample, loader_train = train_loader_aux, take_step = False,)
                 grads += [torch.cat([p.grad.flatten() for p in trainer_step.onepass.model.parameters() if p.grad is not None])]
                 if k==10:
                     break
@@ -53,12 +55,13 @@ def train_epoch(trainer_step,
             output_dict['variance_grad_train'] = variance_grad
             writer.add_scalar('train/variance_grad', variance_grad, iteration)
 
-
             if val_loader is not None :
                 grads = []
                 print("Calculating variance of gradient on val")
-                if hasattr(val_loader, 'batch_sampler') and hasattr(val_loader.batch_sampler, 'update_p_i'):
+                try :
                     val_loader.batch_sampler.p_i = train_loader.batch_sampler.p_i
+                except AttributeError:
+                    pass
                 for k, sample in enumerate(iter(val_loader)):
                     loss_per_instance, output_dict = trainer_step(sample = sample, loader_train = val_loader, take_step = False)
                     grads += [torch.cat([p.grad.flatten() for p in trainer_step.onepass.model.parameters() if p.grad is not None])]
@@ -67,6 +70,7 @@ def train_epoch(trainer_step,
                 variance_grad = torch.var(torch.stack(grads), dim = 0).sum(-1)
                 output_dict['variance_grad_val'] = variance_grad
                 writer.add_scalar('val/variance_grad', variance_grad, iteration)
+
             torch.cuda.empty_cache() 
 
         tmp_kl.append(output_dict['kl'].sum().item())
@@ -111,6 +115,7 @@ def train_epoch(trainer_step,
                 writer.add_scalar('train/p_i_{}'.format(k), train_loader.batch_sampler.p_i[k], iteration)
                 writer.add_scalar('train/w_i_{}'.format(k), train_loader.batch_sampler.w_i[k], iteration)
                 writer.add_scalar('train/n_i_{}'.format(k), train_loader.batch_sampler.n_i[k], iteration)
+                writer.add_scalar('train/p_i_val_{}'.format(k), val_loader.batch_sampler.p_i[k], iteration)
         del batch
 
         for key in output_dict.keys():

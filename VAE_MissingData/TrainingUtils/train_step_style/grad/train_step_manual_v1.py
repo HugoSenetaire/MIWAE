@@ -37,7 +37,7 @@ def calculate_single_grad(list_parameter, current_sample, sig_f, previous_grad =
 
 
 class TrainerStepManualGradNorm(TrainerStepDefault):
-    def __init__(self, onepass,  optim_list, scheduler_list = []) -> None:
+    def __init__(self, onepass,  optim_list, scheduler_list = [], **kwargs) -> None:
         super().__init__(onepass,
                         optim_list,
                         scheduler_list = scheduler_list,

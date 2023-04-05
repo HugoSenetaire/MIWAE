@@ -5,7 +5,7 @@ class TrainerStepDefault():
     """
     Class that handles how one should create 
     """
-    def __init__(self, onepass, optim_list, scheduler_list = [],) -> None:
+    def __init__(self, onepass, optim_list, scheduler_list = [], **kwargs) -> None:
         self.onepass = onepass,
         if isinstance(self.onepass, tuple):
             self.onepass = self.onepass[0]
@@ -21,6 +21,7 @@ class TrainerStepDefault():
 
     def __call__(self, sample, loader_train, loader_val = None, take_step = True, proportion_calculation = False ):
         self.onepass.model.train()
+        
         for optim in self.optim_list:
             optim.zero_grad()
         

@@ -195,7 +195,7 @@ if __name__ == "__main__":
    
     # Get trainer step :
     trainer_step = get_trainer_step(args_dict["batch_sampler"], args_dict["statistics_calculation"], )
-    trainer_step = trainer_step(onepass=onepass, optim_list = optimizer_list, )
+    trainer_step = trainer_step(onepass=onepass, optim_list = optimizer_list, **args_dict)
     
 
     # Train

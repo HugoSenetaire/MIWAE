@@ -1,6 +1,6 @@
 from .trainer_step_default import TrainerStepDefault
 from .grad import TrainerStepFunctorchGradNorm, TrainerStepBackpackBatchL2, TrainerStepBackpackBatch, TrainerStepManualGradNorm, TrainerStepProportionOnVal
-def get_trainer_step(sampler_name, statistic_calculation,):
+def get_trainer_step(sampler_name, statistic_calculation, ):
     if sampler_name in ["StratifiedSamplerLipschitz", "StratifiedSamplerProportional", "StrataPersonalizedSampler",]:
         return TrainerStepDefault
     elif sampler_name in ["StratifiedSamplerAdaptiveSampling", "StratifiedSamplerAdaptiveSamplingWithFischer",]:
